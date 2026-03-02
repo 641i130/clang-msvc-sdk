@@ -195,13 +195,23 @@ list(APPEND _CTF_NATIVE_DEFAULT "-DCMAKE_CXX_COMPILER=${CLANG_CXX_PATH}")
 
 set(CROSS_TOOLCHAIN_FLAGS_NATIVE "${_CTF_NATIVE_DEFAULT}" CACHE STRING "")
 
-cmake_path(GET CLANG_C_PATH PARENT_PATH LLVM_BIN_DIR)
-
 execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version OUTPUT_VARIABLE CLANG_VERSION_OUTPUT)
 string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" CLANG_FULL_VERSION ${CLANG_VERSION_OUTPUT})
 string(REGEX REPLACE "([0-9]+)\\..*" "\\1" CLANG_MAJOR_VERSION ${CLANG_FULL_VERSION})
 
 message(STATUS "LLVM major version: ${CLANG_MAJOR_VERSION}")
+
+execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} -print-resource-dir
+    OUTPUT_VARIABLE CLANG_RESOURCE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+if(NOT CLANG_RESOURCE_DIR)
+    message(FATAL_ERROR "Failed to determine clang resource directory")
+endif()
+
+message(STATUS "Clang resource dir: ${CLANG_RESOURCE_DIR}")
 
 set(COMPILE_FLAGS
     -fexceptions -fcxx-exceptions
@@ -210,7 +220,7 @@ set(COMPILE_FLAGS
     -fms-compatibility-version=19.37
     -Wno-unused-command-line-argument # Needed to accept projects pushing both -Werror and /MP
     # following line is to make SIMD intrinsics work with clang (clang-cl works fine without this)
-    -isystem "${LLVM_BIN_DIR}/../lib/clang/${CLANG_MAJOR_VERSION}/include"
+    -isystem "${CLANG_RESOURCE_DIR}/include"
     -isystem"${MSVC_INCLUDE}"
     -isystem"${WINSDK_INCLUDE}/ucrt"
     -isystem"${WINSDK_INCLUDE}/shared"
